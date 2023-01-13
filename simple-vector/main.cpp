@@ -306,6 +306,7 @@ void TestErase() {
 void TestReserveConstructor() {
   cout << "Test reserve constructor"s << endl;
   SimpleVector<int> v(Reserve(5));
+  assert(&v[0] != nullptr);
   assert(v.GetCapacity() == 5);
   assert(v.IsEmpty());
   cout << "Done!"s << endl << endl;
@@ -367,6 +368,7 @@ void TestNamedMoveConstructor() {
   SimpleVector<int> moved_vector(move(vector_to_move));
   assert(moved_vector.GetSize() == size);
   assert(vector_to_move.GetSize() == 0);
+  assert(&vector_to_move[0] == nullptr);
   cout << "Done!"s << endl << endl;
 }
 
@@ -380,6 +382,7 @@ void TestNamedMoveOperator() {
   moved_vector = move(vector_to_move);
   assert(moved_vector.GetSize() == size);
   assert(vector_to_move.GetSize() == 0);
+  assert(&vector_to_move[0] == nullptr);
   cout << "Done!"s << endl << endl;
 }
 

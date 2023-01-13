@@ -29,9 +29,7 @@ class ArrayPtr {
   // Прекращает владением массивом в памяти, возвращает значение адреса массива
   // После вызова метода указатель на массив должен обнулиться
   [[nodiscard]] Type *Release() noexcept {
-    auto raw_ptr = raw_ptr_;
-    raw_ptr_ = nullptr;
-    return raw_ptr;
+    return std::exchange(raw_ptr_, nullptr);
   }
 
   // Возвращает ссылку на элемент массива с индексом index
@@ -57,10 +55,6 @@ class ArrayPtr {
   // Обменивается значениям указателя на массив с объектом other
   void swap(ArrayPtr &other) noexcept {
     std::swap(raw_ptr_, other.raw_ptr_);
-  }
-
-  void exchange(ArrayPtr &other) noexcept {
-    raw_ptr_ = std::exchange(other.raw_ptr_, nullptr);
   }
 
  private:

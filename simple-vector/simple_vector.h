@@ -37,9 +37,8 @@ class SimpleVector {
     std::generate(begin(), end(), []() { return Type{}; });
   }
 
-  explicit SimpleVector(ReserveProxyObj reserve_proxy_obj)
-      : capacity_(reserve_proxy_obj.GetReservedCapacity()) {
-
+  explicit SimpleVector(ReserveProxyObj reserve_proxy_obj) {
+    Reserve(reserve_proxy_obj.GetReservedCapacity());
   }
 
   // Создаёт вектор из size элементов, инициализированных значением value
@@ -61,9 +60,7 @@ class SimpleVector {
   }
 
   SimpleVector(SimpleVector &&other) noexcept {
-    array_.exchange(other.array_);
-    size_ = other.size_;
-    capacity_ = other.capacity_;
+    swap(other);
     other.Clear();
   }
 
@@ -80,10 +77,8 @@ class SimpleVector {
     if (this == &rhs) {
       return *this;
     }
-    array_.exchange(rhs.array_);
-    size_ = rhs.size_;
-    capacity_ = rhs.capacity_;
-    rhs.Clear();
+    SimpleVector copy(std::move(rhs));
+    swap(copy);
     return *this;
   }
 
@@ -149,12 +144,9 @@ class SimpleVector {
     }
     if (new_size > capacity_) {
       auto new_capacity = std::max(new_size, size_ * 2);
-      ArrayPtr<Type> new_array(new_capacity);
-      std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), new_array.Get());
-      std::generate(new_array.Get() + size_, new_array.Get() + new_size, []() { return Type{}; });
-      array_.swap(new_array);
+      Reserve(new_capacity);
+      std::generate(array_.Get() + size_, array_.Get() + new_size, []() { return Type{}; });
       size_ = new_size;
-      capacity_ = new_capacity;
     }
   }
 
@@ -185,18 +177,14 @@ class SimpleVector {
   Iterator Insert(ConstIterator pos, Type &&value) {
     auto index = std::distance(cbegin(), pos);
     Resize(size_ + 1);
-    std::copy_backward(std::make_move_iterator(begin() + index),
-                       std::make_move_iterator(end() - 1),
-                       end());
+    std::move_backward(begin() + index, end() - 1, end());
     array_[index] = std::move(value);
     return Iterator(&array_[index]);
   }
 
   // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
   void PopBack() noexcept {
-    if (IsEmpty()) {
-      return;
-    }
+    assert(!IsEmpty());
     size_ -= 1;
   }
 
@@ -204,9 +192,7 @@ class SimpleVector {
   Iterator Erase(ConstIterator pos) {
     assert(pos >= begin() && pos < end());
     auto index = std::distance(cbegin(), pos);
-    std::copy(std::make_move_iterator(begin() + index + 1),
-              std::make_move_iterator(end()),
-              &array_[index]);
+    std::move(begin() + index + 1, end(), &array_[index]);
     --size_;
     return Iterator(&array_[index]);
   }
@@ -214,7 +200,7 @@ class SimpleVector {
   void Reserve(size_t new_capacity) {
     if (new_capacity > capacity_) {
       ArrayPtr<Type> new_array(new_capacity);
-      std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), new_array.Get());
+      std::move(begin(), end(), new_array.Get());
       array_.swap(new_array);
       capacity_ = new_capacity;
     }
@@ -271,7 +257,7 @@ class SimpleVector {
 
 template<typename Type>
 inline bool operator==(const SimpleVector<Type> &lhs, const SimpleVector<Type> &rhs) {
-  return !(lhs > rhs) && !(lhs < rhs);
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template<typename Type>
